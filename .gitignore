@@ -3,33 +3,18 @@
 __pycache__/
 
 # internal
-data/external
-data/raw
-data/prelim
-data/processed
-data/datasets/
-data/calc_smi2gcs/
-data/qm_calculations/calc_test
-data/qm_calculations/submit_test
-data/ml_calculations/
-
-ml_data/
-dep/orca_5_0_4
-dep/orca_5_0_4_linux_x86-64_shared_openmpi411
-dep/xtb-6.6.0
-dep/xtb-6.7.0
-
-test/
+dep/
+data/
+ml_halator/
+model/
 notebooks/
 reports/
+test/
 experimental/
  
-ml_pkalculator/ml_analyse.py
-ml_pkalculator/ml_train_on_all_data.py
-ml_pkalculator/ml_validator_clas.py
-ml_pkalculator/ml_validator_reg.py
-ml_pkalculator/ml_visualize.py
-ml_pkalculator/ml_optimizer.py
-
-utils/post_cleanup.py
-utils/mol_visualize.py
+utils/ml_analsyse.py
+utils/utils_allchemy.py
+utils/utils_ibond.py
+utils/utils_reaxys.py
+utils/utils_shen.py
+utils/xyz2mol.py
