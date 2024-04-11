@@ -20,7 +20,7 @@ while home_directory.name != "HAlator":
 sys.path.append(str(home_directory / "qm_halator"))
 sys.path.append(str(home_directory / "smi2gcs"))
 # FIX THIS WHEN WORKING IN ANOTHER DIRECTORY
-from DescriptorCreator.PrepAndCalcDescriptor import Generator
+# from DescriptorCreator.PrepAndCalcDescriptor import Generator
 
 
 def get_args():
@@ -344,6 +344,7 @@ def process_submitted_files_halator(
     path_submitit: str, prelim_path=None
 ) -> pd.DataFrame:
     if not Path(path_submitit).is_dir():
+        print(path_submitit)
         raise ValueError("path is not a directory")
 
     if prelim_path:
@@ -519,16 +520,69 @@ def pka_dmso_to_pka_thf(pka: float, reverse=False) -> float:
     return pka_thf
 
 
-def pred_HA(df, coef_xtb, intercept_xtb, coef_dft, intercept_dft):
+def pred_HA(
+    df,
+    coef_xtb=None,
+    intercept_xtb=None,
+    coef_dft=None,
+    intercept_dft=None,
+    predetermined=None,
+):
+    # xTB coef: 0.6243828853169049, intercept: -251.18455799337963
+    # R2SCAN-3c SP : coef: 0.7535461234955688, intercept: -273.27909510610675
+    # R2SCAN-3c OPTFREQ : coef: 0.7531659289414903, intercept: -270.38989792507357
 
+    if predetermined == "R2SCAN_3c_SP":
+        coef_xtb = 0.6243828853169049
+        intercept_xtb = -251.18455799337963
+        coef_dft = 0.7535461234955688
+        intercept_dft = -273.27909510610675
+    if predetermined == "R2SCAN_3c_OPTFREQ":
+        coef_xtb = 0.6243828853169049
+        intercept_xtb = -251.18455799337963
+        coef_dft = 0.7531659289414903
+        intercept_dft = -270.38989792507357
+
+    print("DEBUG")
+    print(coef_xtb, type(coef_xtb))
+    print(intercept_xtb, type(intercept_xtb))
+    print(coef_dft, type(coef_dft))
+    print(intercept_dft, type(intercept_dft))
     if coef_xtb and intercept_xtb is not None:
         df["HA_qmpred_xtb"] = df["lst_e_rel_xtb"].apply(
-            lambda x: [coef_xtb * energy + intercept_xtb for energy in x]
+            lambda x: [
+                (
+                    coef_xtb * energy + intercept_xtb
+                    if energy != float("inf")
+                    else float("inf")
+                )
+                for energy in x
+            ]
         )
         df["HA_min_qmpred_xtb"] = df.apply(
             lambda row: min(row["HA_qmpred_xtb"]), axis=1
         )
 
+    try:
+        df["HA_qmpred_dft"] = df["lst_e_rel_dft"].apply(
+            lambda x: [
+                (
+                    coef_dft * energy + intercept_dft
+                    if energy != float("inf")
+                    else float("inf")
+                )
+                for energy in x
+            ]
+        )
+
+        df["HA_min_qmpred_dft"] = df.apply(
+            lambda row: min(row["HA_qmpred_dft"]), axis=1
+        )
+    except Exception as e:
+        print(e)
+        print(df["lst_e_rel_dft"])
+
+    if "HA_exp" in df.columns:
         df["HA_qmpred_error_xtb"] = df.apply(
             lambda row: [
                 abs(row["HA_exp"] - ha_pred) for ha_pred in row["HA_qmpred_xtb"]
@@ -539,21 +593,15 @@ def pred_HA(df, coef_xtb, intercept_xtb, coef_dft, intercept_dft):
         df["HA_min_qmpred_error_xtb"] = df.apply(
             lambda row: abs(row["HA_exp"] - min(row["HA_qmpred_xtb"])), axis=1
         )
-
-    df["HA_qmpred_dft"] = df["lst_e_rel_dft"].apply(
-        lambda x: [coef_dft * energy + intercept_dft for energy in x]
-    )
-
-    df["HA_min_qmpred_dft"] = df.apply(lambda row: min(row["HA_qmpred_dft"]), axis=1)
-
-    df["HA_qmpred_error_dft"] = df.apply(
-        lambda row: [abs(row["HA_exp"] - ha_pred) for ha_pred in row["HA_qmpred_dft"]],
-        axis=1,
-    )
-
-    df["HA_min_qmpred_error_dft"] = df.apply(
-        lambda row: abs(row["HA_exp"] - min(row["HA_qmpred_dft"])), axis=1
-    )
+        df["HA_qmpred_error_dft"] = df.apply(
+            lambda row: [
+                abs(row["HA_exp"] - ha_pred) for ha_pred in row["HA_qmpred_dft"]
+            ],
+            axis=1,
+        )
+        df["HA_min_qmpred_error_dft"] = df.apply(
+            lambda row: abs(row["HA_exp"] - min(row["HA_qmpred_dft"])), axis=1
+        )
 
     return df
 

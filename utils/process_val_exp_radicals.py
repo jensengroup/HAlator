@@ -36,6 +36,9 @@ from visualize import (
 )
 
 qm_calculations_dir = home_directory.joinpath("data/qm_calculations")
+submit_dir = qm_calculations_dir.joinpath("benchmark_exp_val/submit")
+prelim_dir = qm_calculations_dir.joinpath("benchmark_exp_val/prelim_dataframes")
+processed_dir = qm_calculations_dir.joinpath("benchmark_exp_val/processed")
 reports_exp_val_dir = home_directory.joinpath("reports/val_exp_radicals")
 
 
@@ -44,17 +47,15 @@ reports_exp_val_dir = home_directory.joinpath("reports/val_exp_radicals")
 # ---------------------------------------
 
 df_processsed_optfreq_r2scan = process_submitted_files_halator(
-    path_submitit=Path(qm_calculations_dir, "submit_bde_optfreq_r2scan_3c_exp_val"),
+    path_submitit=Path(submit_dir, "submit_bde_optfreq_r2scan_3c_exp_val"),
     prelim_path=Path(
-        qm_calculations_dir, "df_prelim_calc_bde_optfreq_r2scan_3c_exp_val_20240408.pkl"
+        prelim_dir, "df_prelim_calc_bde_optfreq_r2scan_3c_exp_val_20240408.pkl"
     ),
 )
 df_processsed_optfreq_r2scan_toluenes_MeCN = process_submitted_files_halator(
-    path_submitit=Path(
-        qm_calculations_dir, "submit_bde_optfreq_r2scan_3c_exp_val_toluenes"
-    ),
+    path_submitit=Path(submit_dir, "submit_bde_optfreq_r2scan_3c_exp_val_toluenes"),
     prelim_path=Path(
-        qm_calculations_dir,
+        prelim_dir,
         "df_prelim_calc_bde_optfreq_r2scan_3c_exp_val_toluenes_20240408.pkl",
     ),
 )
@@ -86,22 +87,65 @@ df_processsed_optfreq_r2scan_all.loc[indices_to_replace] = (
     df_processsed_optfreq_r2scan_toluenes_MeCN
 )
 
+# M06-2X
+
+df_processsed_optfreq_m062x = process_submitted_files_halator(
+    path_submitit=Path(submit_dir, "submit_bde_optfreq_m062x_exp_val"),
+    prelim_path=Path(
+        prelim_dir, "df_prelim_calc_bde_optfreq_m062x_exp_val_20240409.pkl"
+    ),
+)
+df_processsed_optfreq_m062x_toluenes_MeCN = process_submitted_files_halator(
+    path_submitit=Path(submit_dir, "submit_bde_optfreq_m062x_exp_val_toluenes"),
+    prelim_path=Path(
+        prelim_dir,
+        "df_prelim_calc_bde_optfreq_m062x_exp_val_toluenes_20240409.pkl",
+    ),
+)
+
+df_processsed_optfreq_m062x["names_num"] = (
+    df_processsed_optfreq_m062x["names"].str.extract("(\d+)").astype(int)
+)
+df_processsed_optfreq_m062x = df_processsed_optfreq_r2scan.sort_values("names_num")
+df_processsed_optfreq_m062x.reset_index(drop=True, inplace=True)
+
+df_processsed_optfreq_m062x_toluenes_MeCN["names_num"] = (
+    df_processsed_optfreq_m062x_toluenes_MeCN["names"].str.extract("(\d+)").astype(int)
+)
+df_processsed_optfreq_m062x_toluenes_MeCN = (
+    df_processsed_optfreq_m062x_toluenes_MeCN.sort_values("names_num")
+)
+df_processsed_optfreq_m062x_toluenes_MeCN.reset_index(drop=True, inplace=True)
+
+# replace old calculations with correct ones
+df_processsed_optfreq_m062x_all = df_processsed_optfreq_m062x.copy()
+indices_to_replace = df_processsed_optfreq_m062x_all[
+    df_processsed_optfreq_m062x_all.names.isin(
+        df_processsed_optfreq_m062x_toluenes_MeCN.names
+    )
+].index
+
+df_processsed_optfreq_m062x_toluenes_MeCN.index = indices_to_replace
+df_processsed_optfreq_m062x_all.loc[indices_to_replace] = (
+    df_processsed_optfreq_m062x_toluenes_MeCN
+)
+
 # ---------------------------------------
 #                  SP
 # ---------------------------------------
 # r2scan-3c
 
 df_processsed_sp_r2scan = process_submitted_files_halator(
-    path_submitit=Path(qm_calculations_dir, "submit_bde_sp_r2scan_3c_exp_val"),
+    path_submitit=Path(submit_dir, "submit_bde_sp_r2scan_3c_exp_val"),
     prelim_path=Path(
-        qm_calculations_dir, "df_prelim_calc_bde_sp_r2scan_3c_exp_val_20240408.pkl"
+        prelim_dir, "df_prelim_calc_bde_sp_r2scan_3c_exp_val_20240408.pkl"
     ),
 )
 
 df_processsed_sp_r2scan_toluenes_MeCN = process_submitted_files_halator(
-    path_submitit=Path(qm_calculations_dir, "submit_bde_sp_r2scan_3c_exp_val_toluenes"),
+    path_submitit=Path(submit_dir, "submit_bde_sp_r2scan_3c_exp_val_toluenes"),
     prelim_path=Path(
-        qm_calculations_dir,
+        prelim_dir,
         "df_prelim_calc_bde_sp_r2scan_3c_exp_val_toluenes_20240408.pkl",
     ),
 )
@@ -134,10 +178,15 @@ df_processsed_sp_r2scan_all.loc[indices_to_replace] = (
 # ---------------------------------------
 
 df_processsed_optfreq_r2scan_all.to_pickle(
-    Path(qm_calculations_dir, "df_processed_calc_bde_optfreq_r2scan_3c_exp_val.pkl")
+    Path(processed_dir, "df_processed_calc_bde_optfreq_r2scan_3c_exp_val.pkl")
 )
+
+df_processsed_optfreq_m062x_all.to_pickle(
+    Path(processed_dir, "df_processed_calc_bde_optfreq_m062x_exp_val.pkl")
+)
+
 df_processsed_sp_r2scan_all.to_pickle(
-    Path(qm_calculations_dir, "df_processed_calc_bde_sp_r2scan_3c_exp_val.pkl")
+    Path(processed_dir, "df_processed_calc_bde_sp_r2scan_3c_exp_val.pkl")
 )
 
 # ---------------------------------------
@@ -146,16 +195,21 @@ df_processsed_sp_r2scan_all.to_pickle(
 
 # load processed data
 df_HA_optfreq_camb3lypd4 = pd.read_pickle(
-    qm_calculations_dir / "df_processed_calc_HA_optfreq_camb3lypd4_exp_val.pkl"
+    processed_dir / "df_processed_calc_HA_optfreq_camb3lypd4_exp_val.pkl"
 )
+
+df_HA_optfreq_m062x = pd.read_pickle(
+    processed_dir / "df_processed_calc_HA_optfreq_m062x_exp_val.pkl"
+)
+
 df_HA_optfreq_r2scan_3c = pd.read_pickle(
-    qm_calculations_dir / "df_processed_calc_HA_optfreq_r2scan_3c_exp_val.pkl"
+    processed_dir / "df_processed_calc_HA_optfreq_r2scan_3c_exp_val.pkl"
 )
 df_HA_sp_camb3lypd4 = pd.read_pickle(
-    qm_calculations_dir / "df_processed_calc_HA_sp_camb3lypd4_exp_val.pkl"
+    processed_dir / "df_processed_calc_HA_sp_camb3lypd4_exp_val.pkl"
 )
 df_HA_sp_r2scan_3c = pd.read_pickle(
-    qm_calculations_dir / "df_processed_calc_HA_sp_r2scan_3c_exp_val.pkl"
+    processed_dir / "df_processed_calc_HA_sp_r2scan_3c_exp_val.pkl"
 )
 
 
@@ -226,6 +280,32 @@ f, coef_r2scan_optfreq, intercept_r2scan_optfreq = plot_single_subplot_delta_g_h
     save_fig=True,
     save_format="pdf",
     fig_name=f"{str(reports_exp_val_dir)}/r2scan_optfreq_HA_vs_BDE_exp_val",
+    textstr=None,
+    outliers=False,
+    residual=8,
+    fig=f,
+)
+
+print(f"coef: {coef_r2scan_optfreq}, intercept: {intercept_r2scan_optfreq}")
+
+
+print("------------------------")
+print("M06-2X OPTFREQ")
+fig_size = (6, 6)
+f = plt.figure(figsize=fig_size)
+f, coef_m062x_optfreq, intercept_m062x_optfreq = plot_single_subplot_delta_g_halator(
+    x=df_HA_optfreq_m062x[df_HA_optfreq_m062x.e_rel_min_dft != float("inf")][
+        "e_rel_min_dft"
+    ].values,
+    y=df_processsed_optfreq_m062x_all[
+        df_processsed_optfreq_m062x_all.e_rel_min_dft != float("inf")
+    ]["e_rel_min_dft"].values,
+    title="",
+    y_label="QM computed $\mathrm{\Delta G ^{\circ} _{min}}$ BDE [kcal/mol]",
+    x_label="QM computed $\mathrm{\Delta G ^{\circ} _{min}}$ HA [kcal/mol]",
+    save_fig=True,
+    save_format="pdf",
+    fig_name=f"{str(reports_exp_val_dir)}/m062x_optfreq_HA_vs_BDE_exp_val",
     textstr=None,
     outliers=False,
     residual=8,
@@ -313,3 +393,28 @@ f, coef_r2scan_optfreq, intercept_r2scan_optfreq = plot_single_subplot_delta_g_h
 )
 
 print(f"coef: {coef_r2scan_optfreq}, intercept: {intercept_r2scan_optfreq}")
+
+print("------------------------")
+print("M06-2X OPTFREQ")
+fig_size = (6, 6)
+f = plt.figure(figsize=fig_size)
+f, coef_m062x_optfreq, intercept_m062x_optfreq = plot_single_subplot_delta_g_halator(
+    x=df_processsed_optfreq_m062x_all[
+        df_processsed_optfreq_m062x_all.e_rel_min_dft != float("inf")
+    ]["e_rel_min_dft"].values,
+    y=df_processsed_optfreq_m062x_all[
+        df_processsed_optfreq_m062x_all.e_rel_min_dft != float("inf")
+    ]["HA_exp"].values,
+    title="",
+    y_label="Experimental HA",
+    x_label="QM computed $\mathrm{\Delta G ^{\circ} _{min}}$ [kcal/mol]",
+    save_fig=True,
+    save_format="pdf",
+    fig_name=f"{str(reports_exp_val_dir)}/m062x_optfreq_BDE_exp_val",
+    textstr=None,
+    outliers=False,
+    residual=8,
+    fig=f,
+)
+
+print(f"coef: {coef_m062x_optfreq}, intercept: {intercept_m062x_optfreq}")
