@@ -255,6 +255,7 @@ def create_orca_input_rerun(
         same_structure = check_input_output_structure_orca(
             path=path, xyzfile=orca_calc_xyz
         )
+        print(f"same structure {same_structure}")
 
         if not same_structure:
             if Path(Path(path) / xtbopt_xyz).is_file():
@@ -265,7 +266,7 @@ def create_orca_input_rerun(
             print(
                 "using latest geometry optimization from orca_calc.out to create 'orca_calc_rerun.inp'"
             )
-        elif Path(Path(path) / orca_calc_xyz).is_file():
+        elif not same_structure and Path(Path(path) / orca_calc_xyz).is_file():
             loaded_xyz_file = load_and_prepare_xyz(path=path, xyz_file=orca_calc_xyz)
             print("using orca_calc.xyz to create 'orca_calc_rerun.inp'")
     else:
@@ -318,12 +319,7 @@ def create_orca_input_rerun(
         input_file.write("end\n")
 
         input_file.write("\n%geom\nMaxIter 5000\nMaxStep 0.1\nend\n")
-        base_str += "\n"
 
-        input_file.write(base_str)
-        input_file.write(
-            f"\n%maxcore {(mem * 0.75) / ncores}\n%pal nprocs {ncores} end\n"
-        )
         if not (opt or freq):
             input_file.write(f'%cpcm smd true SMDsolvent "{solvent_name}" end\n')
 
@@ -557,12 +553,14 @@ def check_orca_success(path, opt=False, out_file="orca_calc"):
 def check_input_output_structure_orca(path, xyzfile="orca_calc.xyz"):
     # if optimization has been performed
     # check if the input and output structures are the same
-    xyzfile.split(".")[0]
+    # xyzfile.split(".")[0]
     final_structure_sdf = Path(path).joinpath(f'{xyzfile.split(".")[0]}.sdf')
 
     if Path(Path(path) / f"{xyzfile}").is_file():
         for sdf in Path(path).glob("*.sdf"):
-            if "_opt" not in sdf.name:
+            # ensures that the start structure is not the optimized structure
+            if all(sub not in sdf.name for sub in ["_opt", "orca"]):
+                # if "_opt" not in sdf.name:
                 start_structure_sdf = sdf
         molfmt.convert_xyz_to_sdf(Path(Path(path) / f"{xyzfile}"), final_structure_sdf)
         same_structure = molfmt.compare_sdf_structure(

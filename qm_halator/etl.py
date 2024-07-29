@@ -21,6 +21,7 @@ sys.path.append(str(home_directory / "qm_halator"))
 sys.path.append(str(home_directory / "smi2gcs"))
 # FIX THIS WHEN WORKING IN ANOTHER DIRECTORY
 # from DescriptorCreator.PrepAndCalcDescriptor import Generator
+from DescriptorCreator.GraphChargeShell import GraphChargeShell
 
 
 def get_args():
@@ -505,6 +506,80 @@ def get_cm5_desc_vector(smi_name, smi, lst_atom_index, n_shells=6):
     return cm5_list, atom_indices, descriptor_vector, mapper_vector
 
 
+def get_cm5_desc_vector_halator(
+    smi_name, smiles, atom_sites, n_shells=5, benchmark=False
+):
+    # make sure that smi is canonical. Smiles in our workflow should provide a canonical smiles as Chen.MolToSmiles() by default generates the canonical smiles
+    gcs_generator = GraphChargeShell()
+
+    cm5_list = gcs_generator.calc_CM5_charges(
+        smiles, name=smi_name, optimize=False, save_output=True
+    )
+
+    if benchmark:
+
+        descriptor_vector_shells3, mapper_vector_shells3 = (
+            gcs_generator.create_descriptor_vector(
+                atom_sites, n_shells=3, max_neighbors=4, use_cip_sort=True
+            )
+        )
+
+        descriptor_vector_shells4, mapper_vector_shells4 = (
+            gcs_generator.create_descriptor_vector(
+                atom_sites, n_shells=4, max_neighbors=4, use_cip_sort=True
+            )
+        )
+
+        descriptor_vector_shells5, mapper_vector_shells5 = (
+            gcs_generator.create_descriptor_vector(
+                atom_sites, n_shells=5, max_neighbors=4, use_cip_sort=True
+            )
+        )
+
+        descriptor_vector_shells6, mapper_vector_shells6 = (
+            gcs_generator.create_descriptor_vector(
+                atom_sites, n_shells=6, max_neighbors=4, use_cip_sort=True
+            )
+        )
+
+        descriptor_vector_shells7, mapper_vector_shells7 = (
+            gcs_generator.create_descriptor_vector(
+                atom_sites, n_shells=7, max_neighbors=4, use_cip_sort=True
+            )
+        )
+
+        dict_desc_map = {
+            "n_shells_3": {
+                "desc_vect": descriptor_vector_shells3,
+                "mapper": mapper_vector_shells3,
+            },
+            "n_shells_4": {
+                "desc_vect": descriptor_vector_shells4,
+                "mapper": mapper_vector_shells4,
+            },
+            "n_shells_5": {
+                "desc_vect": descriptor_vector_shells5,
+                "mapper": mapper_vector_shells5,
+            },
+            "n_shells_6": {
+                "desc_vect": descriptor_vector_shells6,
+                "mapper": mapper_vector_shells6,
+            },
+            "n_shells_7": {
+                "desc_vect": descriptor_vector_shells3,
+                "mapper": mapper_vector_shells3,
+            },
+        }
+
+        return cm5_list, dict_desc_map
+
+    else:
+        descriptor_vector, mapper_vector = gcs_generator.create_descriptor_vector(
+            atom_sites, n_shells=n_shells, max_neighbors=4, use_cip_sort=True
+        )
+        return cm5_list, descriptor_vector, mapper_vector
+
+
 def calc_pka_lfer(e_rel: float) -> float:
     # pka = 0.5941281 * e_rel - 159.33107321
     pka = 0.59454292 * e_rel - 159.5148093
@@ -563,6 +638,18 @@ def pred_HA(
             lambda row: min(row["HA_qmpred_xtb"]), axis=1
         )
 
+        if "HA_exp" in df.columns:
+            df["HA_qmpred_error_xtb"] = df.apply(
+                lambda row: [
+                    abs(row["HA_exp"] - ha_pred) for ha_pred in row["HA_qmpred_xtb"]
+                ],
+                axis=1,
+            )
+
+            df["HA_min_qmpred_error_xtb"] = df.apply(
+                lambda row: abs(row["HA_exp"] - min(row["HA_qmpred_xtb"])), axis=1
+            )
+
     try:
         df["HA_qmpred_dft"] = df["lst_e_rel_dft"].apply(
             lambda x: [
@@ -583,16 +670,6 @@ def pred_HA(
         print(df["lst_e_rel_dft"])
 
     if "HA_exp" in df.columns:
-        df["HA_qmpred_error_xtb"] = df.apply(
-            lambda row: [
-                abs(row["HA_exp"] - ha_pred) for ha_pred in row["HA_qmpred_xtb"]
-            ],
-            axis=1,
-        )
-
-        df["HA_min_qmpred_error_xtb"] = df.apply(
-            lambda row: abs(row["HA_exp"] - min(row["HA_qmpred_xtb"])), axis=1
-        )
         df["HA_qmpred_error_dft"] = df.apply(
             lambda row: [
                 abs(row["HA_exp"] - ha_pred) for ha_pred in row["HA_qmpred_dft"]
@@ -602,53 +679,269 @@ def pred_HA(
         df["HA_min_qmpred_error_dft"] = df.apply(
             lambda row: abs(row["HA_exp"] - min(row["HA_qmpred_dft"])), axis=1
         )
+    df["atom_lowest_qmpred_xtb"] = df.apply(
+        lambda row: row["lst_atomsite_deprot"][
+            row["HA_qmpred_xtb"].index(row["HA_min_qmpred_xtb"])
+        ],
+        axis=1,
+    )
+    df["atom_lowest_qmpred_dft"] = df.apply(
+        lambda row: row["lst_atomsite_deprot"][
+            row["HA_qmpred_dft"].index(row["HA_min_qmpred_dft"])
+        ],
+        axis=1,
+    )
 
     return df
 
 
-if __name__ == "__main__":
-    args = get_args()
+def control_smi2gcs(df):
 
-    calc_path = args.calc_path
-    submit_path = args.submit_path
-    prelim_path = args.prelim_path
-    result_path = args.result_path
+    new_columns = [
+        "cm5",
+        "desc_vect_n3",
+        "desc_vect_n4",
+        "desc_vect_n5",
+        "desc_vect_n6",
+        "desc_vect_n7",
+        "mapper_n3",
+        "mapper_n4",
+        "mapper_n5",
+        "mapper_n6",
+        "mapper_n7",
+    ]
+
+    for col in new_columns:
+        df[col] = None
+
+    # Store values in a dictionary
+    results = {}
+
+    for idx, row in df.iterrows():
+        cm5_list, dict_desc_map = get_cm5_desc_vector_halator(
+            smi_name=row["names"],
+            smiles=row["smiles"],
+            atom_sites=row["lst_atomindex_deprot"],
+            n_shells=4,
+            benchmark=True,
+        )
+
+        values = {
+            "cm5": cm5_list,
+            "desc_vect_n3": dict_desc_map["n_shells_3"]["desc_vect"],
+            "desc_vect_n4": dict_desc_map["n_shells_4"]["desc_vect"],
+            "desc_vect_n5": dict_desc_map["n_shells_5"]["desc_vect"],
+            "desc_vect_n6": dict_desc_map["n_shells_6"]["desc_vect"],
+            "desc_vect_n7": dict_desc_map["n_shells_7"]["desc_vect"],
+            "mapper_n3": dict_desc_map["n_shells_3"]["mapper"],
+            "mapper_n4": dict_desc_map["n_shells_4"]["mapper"],
+            "mapper_n5": dict_desc_map["n_shells_5"]["mapper"],
+            "mapper_n6": dict_desc_map["n_shells_6"]["mapper"],
+            "mapper_n7": dict_desc_map["n_shells_7"]["mapper"],
+        }
+
+        results[idx] = values
+
+    # Update dataframe outside the loop
+    for idx, values in results.items():
+        for col, value in values.items():
+            df.at[idx, col] = value
+
+    return df
+
+
+def sort_names(df):
+    # Split 'names' into text and number
+    df["names_text"] = df["names"].str.extract(r"(\D+)", expand=False)
+    df["names_num_text"] = df["names"].str.extract(r"(\d+)", expand=False).astype(int)
+
+    # Sort by 'names_text' and 'names_num_text'
+    df.sort_values(by=["names_text", "names_num_text"], inplace=True)
+
+    # Drop the temporary columns
+    df.drop(columns=["names_text", "names_num_text"], inplace=True)
+    return df
+
+
+if __name__ == "__main__":
+    # args = get_args()
+
+    # calc_path = args.calc_path
+    # submit_path = args.submit_path
+    # prelim_path = args.prelim_path
+    # result_path = args.result_path
+
+    # # path_qm_calculations = Path.cwd() / "data/qm_calculations"
+    # # path_submitit = path_qm_calculations.joinpath("submit_test")
+    # # path_calc = path_qm_calculations.joinpath("calc_test")
 
     # path_qm_calculations = Path.cwd() / "data/qm_calculations"
-    # path_submitit = path_qm_calculations.joinpath("submit_test")
-    # path_calc = path_qm_calculations.joinpath("calc_test")
+    # path_calc = Path.cwd().joinpath(calc_path)
+    # path_submitit = Path.cwd().joinpath(submit_path)
+    # prelim_path = Path.cwd().joinpath(prelim_path)
+    # result_path = Path.cwd().joinpath(result_path)
 
-    path_qm_calculations = Path.cwd() / "data/qm_calculations"
-    path_calc = Path.cwd().joinpath(calc_path)
-    path_submitit = Path.cwd().joinpath(submit_path)
-    prelim_path = Path.cwd().joinpath(prelim_path)
-    result_path = Path.cwd().joinpath(result_path)
+    # print(path_submitit)
+    # df_results = process_submitted_files(
+    #     path_submitit=path_submitit,
+    #     prelim_path=prelim_path,
+    # )
 
-    print(path_submitit)
-    df_results = process_submitted_files(
-        path_submitit=path_submitit,
-        prelim_path=prelim_path,
+    # print("calculating cm5 charges and descriptor vectors")
+    # output = df_results.apply(
+    #     lambda row: get_cm5_desc_vector(
+    #         smi_name=row["names"],
+    #         smi=row["smiles"],
+    #         lst_atom_index=row[
+    #             "lst_atomindex_deprot"
+    #         ],  # lst_atom_index , lst_atom_index_deprot,
+    #         n_shells=6,
+    #     ),
+    #     axis=1,
+    # )
+    # (
+    #     df_results["cm5"],
+    #     df_results["atom_indices"],
+    #     df_results["descriptor_vector"],
+    #     df_results["mapper_vector"],
+    # ) = zip(*output)
+
+    # print("saving results to pickle")
+    # # save df_results
+    # df_results.to_pickle(result_path)
+
+    import pandas as pd
+
+    # import submitit
+
+    # df_processed_optfreq_r2scan_dataset_all = pd.read_pickle(
+    #     "/groups/kemi/borup/HAlator/data/qm_calculations/results_dataset/processed/df_processed_HA_optfreq_r2scan_3c_dataset_all_with_valexp_20240528.pkl"
+    # )
+
+    # df_processed_optfreq_r2scan_dataset_all = pd.read_pickle(
+    #     "/groups/kemi/borup/HAlator/data/qm_calculations/results_reaction_data/processed/df_processed_HA_optfreq_r2scan_3c_reaction_data_fixed_20240607.pkl"
+    # )
+
+    # df_processed_optfreq_r2scan_dataset_all = pd.read_pickle(
+    #     "/groups/kemi/borup/HAlator/data/qm_calculations/results_reaction_data/processed/df_processed_HA_optfreq_r2scan_3c_reaction_data_ref43_20240612.pkl"
+    # )
+
+    # df_processed_optfreq_r2scan_dataset_all = pd.read_pickle(
+    #     "/groups/kemi/borup/HAlator/data/datasets/dataset_triangulenium_example.pkl"
+    # )
+    df_processed_optfreq_r2scan_dataset_all = pd.read_pickle(
+        "/groups/kemi/borup/HAlator/data/datasets/reaction_dataset_ox_deg.pkl"
     )
 
-    print("calculating cm5 charges and descriptor vectors")
-    output = df_results.apply(
-        lambda row: get_cm5_desc_vector(
+    # NOTE Executor does not work in its current form. Missing module. Cannot find descriptor vector
+    # executor = submitit.AutoExecutor(
+    #     folder="/groups/kemi/borup/HAlator/submit_desc_vect2"
+    # )
+    # executor.update_parameters(
+    #     name="HAlator",
+    #     cpus_per_task=int(10),
+    #     mem_gb=int(10),
+    #     timeout_min=50000,  # 50000 minues --> 34.72222 days
+    #     slurm_partition="kemi1",
+    #     slurm_array_parallelism=20,
+    # )
+    # print(executor)
+
+    # jobs = []
+    # with executor.batch():
+    #     chunk_size = 1
+    #     for start in range(
+    #         0, df_processed_optfreq_r2scan_dataset_all.shape[0], chunk_size
+    #     ):
+    #         df_subset = df_processed_optfreq_r2scan_dataset_all.iloc[
+    #             start : start + chunk_size
+    #         ]
+    #         job = executor.submit(
+    #             control_smi2gcs,
+    #             df_subset,
+    #         )
+    #         jobs.append(job)
+
+    # output = df_processed_optfreq_r2scan_dataset_all.apply(
+    #     lambda row: get_cm5_desc_vector_halator(
+    #         smi_name=row["names"],
+    #         smiles=row["smiles"],
+    #         atom_sites=row["lst_atomindex_deprot"],
+    #         n_shells=5,
+    #         benchmark=True,
+    #     ),
+    #     axis=1,
+    # )
+
+    # df_processed_optfreq_r2scan_dataset_all["cm5"] = cm5_list
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n3"] = dict_desc_map[
+    #     "n_shells_3"
+    # ]["desc_vect"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n4"] = dict_desc_map[
+    #     "n_shells_4"
+    # ]["desc_vect"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n5"] = dict_desc_map[
+    #     "n_shells_5"
+    # ]["desc_vect"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n6"] = dict_desc_map[
+    #     "n_shells_6"
+    # ]["desc_vect"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n7"] = dict_desc_map[
+    #     "n_shells_7"
+    # ]["desc_vect"]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n3"] = dict_desc_map["n_shells_3"][
+    #     "mapper"
+    # ]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n4"] = dict_desc_map["n_shells_4"][
+    #     "mapper"
+    # ]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n5"] = dict_desc_map["n_shells_5"][
+    #     "mapper"
+    # ]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n6"] = dict_desc_map["n_shells_6"][
+    #     "mapper"
+    # ]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n7"] = dict_desc_map["n_shells_7"][
+    #     "mapper"
+    # ]
+
+    # df_processed_optfreq_r2scan_dataset_all["cm5"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n3"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n4"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n5"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n6"]
+    # df_processed_optfreq_r2scan_dataset_all["desc_vect_n7"]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n3"]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n4"]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n5"]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n6"]
+    # df_processed_optfreq_r2scan_dataset_all["mapper_n7"]
+
+    # Apply the function and get the output
+    output = df_processed_optfreq_r2scan_dataset_all.apply(
+        lambda row: get_cm5_desc_vector_halator(
             smi_name=row["names"],
-            smi=row["smiles"],
-            lst_atom_index=row[
-                "lst_atomindex_deprot"
-            ],  # lst_atom_index , lst_atom_index_deprot,
-            n_shells=6,
+            smiles=row["smiles"],
+            atom_sites=row["lst_atomindex_deprot"],
+            n_shells=3,
+            benchmark=True,
         ),
         axis=1,
     )
-    (
-        df_results["cm5"],
-        df_results["atom_indices"],
-        df_results["descriptor_vector"],
-        df_results["mapper_vector"],
-    ) = zip(*output)
 
-    print("saving results to pickle")
-    # save df_results
-    df_results.to_pickle(result_path)
+    # Unpack the tuples and assign to new columns
+    df_processed_optfreq_r2scan_dataset_all["cm5"] = output.apply(lambda x: x[0])
+
+    # Unpack the dictionary and assign to new columns
+    for i in range(3, 8):
+        shell_key = f"n_shells_{i}"
+        df_processed_optfreq_r2scan_dataset_all[f"desc_vect_n{i}"] = output.apply(
+            lambda x: x[1][shell_key]["desc_vect"]
+        )
+        df_processed_optfreq_r2scan_dataset_all[f"mapper_n{i}"] = output.apply(
+            lambda x: x[1][shell_key]["mapper"]
+        )
+
+    df_processed_optfreq_r2scan_dataset_all.to_pickle(
+        "/groups/kemi/borup/HAlator/data/qm_calculations/results_reaction_data/processed/df_reaction_dataset_ox_deq.pkl"
+    )

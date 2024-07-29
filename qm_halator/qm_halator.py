@@ -37,7 +37,7 @@ from rdkit import RDLogger
 import molecule_formats as molfmt
 import run_xTB as run_xTB
 from run_orca import run_orca, rerun_orca
-from modify_smiles import remove_Hs_halator
+from modify_smiles import remove_Hs_halator, remove_Hs
 
 lg = RDLogger.logger()
 lg.setLevel(RDLogger.CRITICAL)
@@ -393,6 +393,8 @@ def check_bridgehead(name, smiles, smiles_neutral, atomsite):
             name=name, smi=smiles, rdkit_mol=rdkit_mol, n_conformers=n_conformers
         )
 
+        # using remove_Hs instead of remove_Hs_halator as there is an error
+        # in how we handle mols in stead of smiles in remove_Hs_halator
         for conf_mol_neutral, conf_name_deprot in zip(
             lst_conf_mols_neutral, lst_conf_names_deprot_prelim
         ):
@@ -405,7 +407,7 @@ def check_bridgehead(name, smiles, smiles_neutral, atomsite):
                 lst_mol_deprot,
                 lst_names_deprot,
                 dict_atom_idx_to_H_indices,
-            ) = remove_Hs_halator(
+            ) = remove_Hs(
                 name=name,
                 smiles=None,
                 rdkit_mol=conf_mol_neutral,
@@ -527,7 +529,7 @@ def calculateEnergy(
     minE_index = np.argmin(final_conf_energies)
     best_conf_mol = final_conf_mols[minE_index]
     best_conf_energy_xtb = final_conf_energies[minE_index]
-
+    print(f"minimum conf path {conf_paths[minE_index]}")
     # uncomment when doing single point calculations on all unique conformers
     if best_conf_energy_xtb != float(99999):
         # runs a Orca on the lowest xTB energy conformer

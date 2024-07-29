@@ -441,18 +441,18 @@ def remove_Hs(
     rdkit_mol = Chem.AddHs(rdkit_mol)
     charge_neutral = Chem.GetFormalCharge(rdkit_mol)
 
-    for i, a in enumerate(rdkit_mol.GetAtoms()):
-        a.SetAtomMapNum(i + 1)
+    for a in rdkit_mol.GetAtoms():
+        a.SetAtomMapNum(a.GetIdx() + 1)
 
     ref_mol_smiles_map = Chem.MolToSmiles(rdkit_mol)
 
     dict_atom_idx_to_H_indices = {
-        atom_idx: [
+        atom.GetIdx(): [
             atom_neighbor.GetIdx()
             for atom_neighbor in atom.GetNeighbors()
             if atom_neighbor.GetSymbol() == "H"
         ]
-        for atom_idx, atom in enumerate(rdkit_mol.GetAtoms())
+        for atom in rdkit_mol.GetAtoms()
         if atom.GetSymbol() != "H" and atom.GetSymbol() == "C"
     }  # note if atom.GetSymbol() == "C" is note invoked, O-H, N-H, etc. will also get deprotonated.
     dict_atom_idx_to_H_indices = {
@@ -477,11 +477,14 @@ def remove_Hs(
         if remove_H:
             rdkit_mol2 = Chem.RemoveHs(rdkit_mol2)
         smi2 = remove_mapping(Chem.MolToSmiles(rdkit_mol2))
-        for i, a in enumerate(rdkit_mol2.GetAtoms()):
-            a.SetAtomMapNum(i + 1)
+        for a in rdkit_mol2.GetAtoms():
+            a.SetAtomMapNum(a.GetIdx() + 1)
         smi2_map = Chem.MolToSmiles(rdkit_mol2)
         charge_deprot = Chem.GetFormalCharge(rdkit_mol2)
-        name_deprot = f"{name}#{charge_deprot}={atom_idx+1}"
+        if rxn == "rm_hydrogen":
+            name_deprot = name_deprot = f"{name}#rad{charge_deprot}={atom_idx+1}"
+        else:
+            name_deprot = f"{name}#{charge_deprot}={atom_idx+1}"
         lst_idx_deprot_mol.append(
             (atom_idx, atom_idx + 1, smi2, smi2_map, rdkit_mol2, name_deprot)
         )
