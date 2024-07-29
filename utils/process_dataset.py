@@ -36,6 +36,9 @@ from visualize import (
 )
 
 qm_calculations_dir = home_directory.joinpath("data/qm_calculations")
+submit_dir = qm_calculations_dir.joinpath("results_dataset/submit")
+prelim_dir = qm_calculations_dir.joinpath("results_dataset/prelim_dataframes")
+processed_dir = qm_calculations_dir.joinpath("results_dataset/processed")
 reports_exp_val_dir = home_directory.joinpath("reports/dataset")
 
 
@@ -107,6 +110,21 @@ data = {
     },
 }
 
+data_bridgeheads = {
+    "bridgeheads": {
+        "optfreq": {
+            "calc": "calc_HA_optfreq_r2scan_3c_dataset_bridgeheads",
+            "submit": "submit_HA_optfreq_r2scan_3c_dataset_bridgeheads",
+            "prelim_dataframe": "df_prelim_calc_HA_optfreq_r2scan_3c_dataset_bridgeheads_20240417.pkl",
+        },
+        "sp": {
+            "calc": "calc_HA_sp_r2scan_3c_dataset_bridgeheads",
+            "submit": "submit_HA_sp_r2scan_3c_dataset_bridgeheads",
+            "prelim_dataframe": "df_prelim_calc_HA_sp_r2scan_3c_dataset_bridgeheads_20240417.pkl",
+        },
+    },
+}
+
 # df_processsed_optfreq_r2scan_bordwell = process_submitted_files_halator(
 #     path_submitit=Path(qm_calculations_dir, data["bordwell"]["optfreq"]["submit"]),
 #     prelim_path=Path(
@@ -152,13 +170,74 @@ def process_all(data, qm_calculations_dir, optfreq=True):
     return df_result
 
 
-df_processsed_optfreq_r2scan = process_all(data, qm_calculations_dir, optfreq=True)
-df_processsed_sp_r2scan = process_all(data, qm_calculations_dir, optfreq=False)
+# df_processsed_optfreq_r2scan = process_all(data, qm_calculations_dir, optfreq=True)
+# df_processsed_sp_r2scan = process_all(data, qm_calculations_dir, optfreq=False)
 
-df_processsed_optfreq_r2scan.to_pickle(
-    Path(qm_calculations_dir, "df_processed_HA_optfreq_r2scan_3c_dataset.pkl")
+
+df_processsed_optfreq_r2scan = pd.read_pickle(
+    Path(processed_dir, "df_processed_HA_optfreq_r2scan_3c_dataset_all.pkl")
+)
+df_processsed_sp_r2scan = pd.read_pickle(
+    Path(processed_dir, "df_processed_HA_sp_r2scan_3c_dataset_all.pkl")
 )
 
-df_processsed_sp_r2scan.to_pickle(
-    Path(qm_calculations_dir, "df_processed_HA_sp_r2scan_3c_dataset.pkl")
+df_processsed_optfreq_r2scan_bridgeheads = process_all(
+    data_bridgeheads,
+    Path(f"{Path.home()}/HAlator/data/qm_calculations"),
+    optfreq=True,
+)
+df_processed_sp_r2scan_bridgeheads = process_all(
+    data_bridgeheads,
+    Path(f"{Path.home()}/HAlator/data/qm_calculations"),
+    optfreq=False,
+)
+
+df_processsed_optfreq_r2scan_bridgeheads.to_pickle(
+    Path(
+        processed_dir,
+        "df_processed_HA_optfreq_r2scan_3c_dataset_bridgeheads.pkl",
+    )
+)
+
+df_processed_sp_r2scan_bridgeheads.to_pickle(
+    Path(
+        processed_dir,
+        "df_processed_HA_sp_r2scan_3c_dataset_bridgeheads.pkl",
+    )
+)
+
+# replace old calculations with correct ones
+df_processsed_optfreq_r2scan_all = df_processsed_optfreq_r2scan.copy()
+indices_to_replace_optfreq = df_processsed_optfreq_r2scan_all[
+    df_processsed_optfreq_r2scan_all.names.isin(
+        df_processsed_optfreq_r2scan_bridgeheads.names
+    )
+].index
+
+df_processsed_optfreq_r2scan_bridgeheads.index = indices_to_replace_optfreq
+df_processsed_optfreq_r2scan_all.loc[indices_to_replace_optfreq] = (
+    df_processsed_optfreq_r2scan_bridgeheads
+)
+
+df_processsed_sp_r2scan_all = df_processsed_sp_r2scan.copy()
+indices_to_replace_sp = df_processsed_sp_r2scan_all[
+    df_processsed_sp_r2scan.names.isin(df_processed_sp_r2scan_bridgeheads.names)
+].index
+
+df_processed_sp_r2scan_bridgeheads.index = indices_to_replace_sp
+df_processsed_sp_r2scan.loc[indices_to_replace_sp] = df_processed_sp_r2scan_bridgeheads
+
+
+df_processsed_optfreq_r2scan_all.to_pickle(
+    Path(
+        processed_dir,
+        "df_processed_HA_optfreq_r2scan_3c_dataset_with_bridgeheads.pkl",
+    )
+)
+
+df_processsed_sp_r2scan_all.to_pickle(
+    Path(
+        processed_dir,
+        "df_processed_HA_sp_r2scan_3c_dataset_with_bridgeheads.pkl",
+    )
 )
