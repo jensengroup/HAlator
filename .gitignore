@@ -27,7 +27,7 @@ ml_halator/ml_reg_full_models_halator.py
 ml_halator/ml_validator_clas_halator.py
 ml_halator/ml_validator_reg_halator.py
 ml_halator/train_n_shells.py
-
+qm_halator/resubmit_manual.py
 notebooks/
 reports/
 test/
