@@ -1,8 +1,8 @@
-# Hydrictor
-Hydrictor is a fully automated quantum chemistry (QM)-based workflow that computes the C-H hydricities/Hydride affinities of molecules. The QM workflow uses GFN2-xTB with ORCA on top.
-Hydrictor also includes an atom-based machine learning model (ML) to predict the C-H hydricities. The ML model (LightGBM regression model) is based on CM5 atomic charges that are computed using semiempirical tight binding (GFN1-xTB).
+# HAlator
+HAlator is a fully automated quantum chemistry (QM)-based workflow that computes the C-H hydricities/Hydride affinities of molecules. The QM workflow uses GFN2-xTB with ORCA on top.
+HAlator also includes an atom-based machine learning model (ML) to predict the C-H hydricities. The ML model (LightGBM regression model) is based on CM5 atomic charges that are computed using semiempirical tight binding (GFN1-xTB).
 
-For more, see [Hydrictor: a hydricity predictor for C-H bonds](TBD)
+For more, see [Predicting C-H activation through hydride affinity and homolytic bond dissociation energies](TBD)
 
 <a href="https://colab.research.google.com/drive/1ohqSGrrVJ6bHJJUg7MdzG7GqM0SnFciq?usp=sharing">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
@@ -12,7 +12,7 @@ For more, see [Hydrictor: a hydricity predictor for C-H bonds](TBD)
 ## Installation
 We recommend using `conda` to get the required dependencies
 
-    conda env create -f environment.yml && conda activate hydrictor
+    conda env create -f environment.yml && conda activate HAlator
 
 We recommend downloading the precompiled binaries for the latest version of xTB (v. 6.7.0)
 
@@ -25,7 +25,7 @@ For more information, please see: https://xtb-docs.readthedocs.io/en/latest/setu
 
 Hereafter, ORCA (v. 5.0.4) is required for the QM workflow. Installation instructions can be found at https://www.orcasoftware.de/tutorials_orca/first_steps/install.html, https://sites.google.com/site/orcainputlibrary/setting-up-orca, and https://www.faccts.de/docs/orca/5.0/tutorials/.
 
-ORCA requires a specific path for our QM workflow to work. Therefore, change the paths under the function `run_orca_calculation` in `qm_hydrictor/run_orca.py`.
+ORCA requires a specific path for our QM workflow to work. Therefore, change the paths under the function `run_orca_calculation` in `qm_halator/run_orca.py`.
 
 
 
@@ -36,13 +36,13 @@ Both our QM workflow and ML workflow are accessible through the command line in 
 #### QM calculations
 Below is an example of how to start the QM workflow:
 
-    python qm_hydrictor/qm_hydrictor.py -f r2scan-3c -o -q
+    python qm_halator/qm_halator.py -f r2scan-3c -o -q
 
-This will start the QM workflow with a the test.csv file located under `data/qm_calculations/test.csv`
+This will start the QM workflow with a the test.csv file located under `data/qm_calculations/test.csv`. For the full example, see below:
 
-python qm_halator/qm_halator.py -cpus 20 -mem 30 -csv data/datasets/reaction_dataset_ox_deg.csv -calc data/qm_calculations/calc_HA_optfreq_r2scan_3c_reaction_data_ox_deg -submit data/qm_calculations/calc_HA_optfreq_r2scan_3c_reaction_data_ox_deg -f r2scan-3c -o -q
+    python qm_halator/qm_halator.py -cpus 4 -mem 8 -csv data/test.csv -calc data/qm_calculations/calc_test -submit data/qm_calculations/submit_test -f r2scan-3c -o -q
 
-The arguments for `qm_hydrictor.py` are explained below:
+The arguments for `qm_halator.py` are explained below:
 | Arguments    | Description | 
 | :------- |:---------|
 | `-cpus` | Number of cpus per job. Defaults to 4 cpus |
@@ -81,11 +81,12 @@ The arguments for `etl.py` are explained below:
 | `-submit` | Path for saving results from submitit. Defaults to "data/qm_calculations/submit_test" |
 | `-prelim` | path where the preliminary dataframe is. Defaults to "data/qm_calculations/df_prelim_calc_test.pkl" |
 | `-result` | Path where the resulting dataframe is placed. Defaults to "data/qm_calculations/df_results_calc_test.pkl" |
+| `-no_smi2gcs` | Will not calculate the CM5 charges and descriptor vectors for the molecules. By default it the descriptor vectors will be calculated. Use -no_smi2gcs False if the descriptor vectors are not needed." |
 
 ### ML workflow
 Below is an example of how to use the ML workflow:
     
-    python ml_hydrictor/ml_hydrictor.py -s CC(=O)Cc1ccccc1 -n comp2 -m models/reg_model_all.txt
+    python ml_halator/ml_halator.py -s CC(=O)Cc1ccccc1 -n comp2 -m models/reg_model_all.txt
 
 The arguments for the ML workflow are explained below:
 | Arguments    | Description | 
@@ -100,22 +101,23 @@ Hereafter, a list of tuples are returned:
 
 The first element in each tuple is the atom index and the second element in each tuple is the ML predicted hydricity for that atom index.
 
-The workflow then produces an .png or .svg image (default) of the molecule with its atom indices for easy comparison. The image of the molecule will also contain a teal circle that highlights the site with the lowest hydricity. If -e is > 0, orange circles highlights the sites that are within {number} kcal/mol from the lowest hydricity. The .png or .svg image is by default saved to `data/ml_predictions/`.
+The workflow then produces an .png or .svg image (default) of the molecule with its atom index for easy comparison. The image of the molecule will also contain a teal circle that highlights the site with the lowest hydricity. If -e is > 0, orange circles highlights the sites that are within {number} kcal/mol from the lowest hydricity. The .png or .svg image is by default saved to `data/ml_predictions/`.
 
 ### Data
 #### Computed data for CM5 charges 
 Both the QM workflow and the ML workflow uses GFN1-xTB to produce CM5 charges. The data from the xTB calculation is saved to  `data/calc_smi2gcs`.
 
 #### Additional data
-All additionl data can be found [here](TBD)
+All additionl data can be found [here](https://sid.erda.dk/sharelink/coKwQQzlzr)
 
 #### Additional data
 Here the data is split into three folders: `datasets`, `qm_data` and `ml_data`. The description for each folder is found below:
 
 | Folder    | Description |
 | :------- |:---------|
-| `datasets` | Includes all datasets. Each `.pkl` contains a pandas DataFrame that can be loaded using the following command `pd.read_pickle(datasets/{dataset name}, compression={'method': 'gzip'})`. |
-| `qm_data/calculations` | Includes all QM calculations, including .xyz files and .log files. |
+| `datasets` | Includes all datasets. Each `.pkl` contains a pandas DataFrame that can be loaded using the following command `pd.read_pickle(dataets/{dataset name})`. |
+| `qm_data/` | Includes all QM calculations, including .xyz files and .log files for either the QM dataset, reaction dataset or the smi2gcs calculations. |
+| `ml_data/ALFABET` | Includes the ML predicted BDEs by ALFABET for either the QM dataset or the reaction dataset. |
 | `ml_data/models` | Includes trained ML models on either all data or ML models trained on the training set (80 % of the data). |
 | `ml_data/validation` | Includes data from the cross-validation for the ML models. The .log files gives an overview of the performance metrics. |
 
