@@ -3,7 +3,7 @@ from pathlib import Path
 
 home_directory = Path.cwd()
 if home_directory.name != "HAlator":
-    raise ValueError("Please run this script from the pKalculator directory")
+    raise ValueError("Please run this script from the HAlator directory")
 sys.path.append(str(home_directory / "qm_halator"))
 sys.path.append(str(home_directory / "smi2gcs"))
 sys.path.append(str(home_directory / "utils"))
@@ -11,15 +11,11 @@ sys.path.append(str(home_directory / "utils"))
 import argparse
 
 from rdkit import Chem
-from rdkit.Chem import Draw
-from rdkit.Chem import rdDepictor
-from io import BytesIO
-from PIL import Image
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 import lightgbm as lgb
 
 from etl import get_cm5_desc_vector_halator
-from modify_smiles import deprotonate, remove_Hs_halator
+from modify_smiles import remove_Hs_halator
 from visualize_mols import draw_mol_highlight_qm_ml_halator
 
 # from DescriptorCreator.PrepAndCalcDescriptor import Generator
@@ -68,92 +64,6 @@ def get_args():
     return args
 
 
-# def draw_mol_highlight(
-#     smiles,
-#     lst_atomindex,
-#     lst_pka_pred,
-#     error=0.0,
-#     legend="",
-#     img_size=(350, 300),
-#     draw_option="png",
-#     draw_legend=False,
-#     save_folder="",
-#     name="test",
-# ):
-
-#     rdDepictor.SetPreferCoordGen(True)
-#     highlightatoms = defaultdict(list)
-#     atomrads = {}
-#     dict_color = {
-#         "green": (0.2, 1, 0.0, 1),
-#         "teal": (0.0, 0.5, 0.5, 1),
-#     }
-
-#     rdkit_mol = Chem.MolFromSmiles(smiles)
-#     rdDepictor.Compute2DCoords(rdkit_mol)
-#     rdDepictor.StraightenDepiction(rdkit_mol)
-
-#     dict_atomidx_pka = {
-#         atom_index: pka
-#         for atom_index, pka in zip(lst_atomindex, lst_pka_pred)
-#         if abs(pka - min(lst_pka_pred)) <= error
-#     }
-
-#     sorted_dict_atomidx_pka = OrderedDict(
-#         sorted(dict_atomidx_pka.items(), key=lambda x: x[1], reverse=False)
-#     )
-
-#     for atom_idx, atom in enumerate(rdkit_mol.GetAtoms()):
-#         if atom_idx in sorted_dict_atomidx_pka.keys():
-#             highlightatoms[atom_idx].append(dict_color["teal"])
-#             atomrads[atom_idx] = 0.2
-#             label = f"{sorted_dict_atomidx_pka[atom_idx]:.2f}"
-#             # atom.SetProp("atomNote", label)
-
-#     if draw_option == "png":
-#         d2d = Draw.MolDraw2DCairo(img_size[0], img_size[1])
-#     elif draw_option == "svg":
-#         d2d = Draw.MolDraw2DSVG(img_size[0], img_size[1])
-#     dopts = d2d.drawOptions()
-#     dopts.addAtomIndices = True
-#     dopts.legendFontSize = 35  # legend font size
-#     dopts.atomHighlightsAreCircles = True
-#     dopts.fillHighlights = True
-#     dopts.annotationFontScale = 0.9
-#     dopts.centreMoleculesBeforeDrawing = True
-#     dopts.fixedScale = 0.95  # -1.0 #0.5
-#     # dopts.drawMolsSameScale = False
-#     mol = Draw.PrepareMolForDrawing(rdkit_mol)
-#     if draw_legend:
-#         d2d.DrawMoleculeWithHighlights(
-#             mol, legend, dict(highlightatoms), {}, dict(atomrads), {}
-#         )
-#     else:
-#         d2d.DrawMoleculeWithHighlights(
-#             mol, "", dict(highlightatoms), {}, dict(atomrads), {}
-#         )
-#     d2d.FinishDrawing()
-
-#     if draw_option == "png":
-#         bio = BytesIO(d2d.GetDrawingText())
-#         save_path = Path(f"{save_folder}/{name}.png")
-#         img = Image.open(bio)
-#         img.save(
-#             save_path,
-#             dpi=(700, 600),
-#             transparent=False,
-#             facecolor="white",
-#             format="PNG",
-#         )
-#         # return (legend.split(" ")[0], Image.open(bio))
-#     elif draw_option == "svg":
-#         svg = d2d.GetDrawingText()
-#         svg.replace("svg:", "")
-#         with open(f"{save_folder}/{name}.svg", "w") as f:
-#             f.write(svg)
-#         # return (legend.split(" ")[0], svg)
-
-
 if __name__ == "__main__":
     args = get_args()
     smiles = args.smiles
@@ -170,13 +80,11 @@ if __name__ == "__main__":
             f"Model file {model} does not exist. Check model path and try again"
         )
     reg_model_full = lgb.Booster(model_file=model)
-    # reg_model_full = lgb.Booster(model_file='full_models/final_reg_model_all_data_dart_default_nshells3_20240607.txt')
     print("-" * 50)
     print(f"Loaded model: {model}")
     print("-" * 50)
     smiles = Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
 
-    # new code
     (
         ref_mol_smiles_map,
         lst_atomindex_deprot,
