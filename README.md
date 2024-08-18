@@ -12,7 +12,7 @@ For more, see [Predicting C-H activation through hydride affinity and homolytic 
 ## Installation
 We recommend using `conda` to get the required dependencies
 
-    conda env create -f environment.yml && conda activate HAlator
+    conda env create -f environment.yml && conda activate halator
 
 We recommend downloading the precompiled binaries for the latest version of xTB (v. 6.7.0)
 
@@ -67,10 +67,13 @@ If needed, SLURM commands can be updated to work at your HPC.
 The QM workflow produces a preliminary dataframe with both the neutral smiles and deprotonated smiles that is needed to run for determining the QM computed C-H hydricities.
 
 The default location is here: `data/qm_calculations/`.
+Note, that the preliminary dataframe contains the date the QM calculations are started.
 
 After the QM calculations are completed, please run: 
     
-    python qm_pkalculator/etl.py
+    python qm_pkalculator/etl.py -prelim data/qm_calculations/df_prelim_calc_test_{date}.
+
+
 
 Now, the resulting dataframe with QM calculations are produced with the default location is here: `data/qm_calculations/`.
 
@@ -86,7 +89,7 @@ The arguments for `etl.py` are explained below:
 ### ML workflow
 Below is an example of how to use the ML workflow:
     
-    python ml_halator/ml_halator.py -s CC(=O)Cc1ccccc1 -n comp2 -m models/reg_model_all.txt
+    python ml_halator/ml_halator.py -s CC(=O)Cc1ccccc1 -n comp2
 
 The arguments for the ML workflow are explained below:
 | Arguments    | Description | 
