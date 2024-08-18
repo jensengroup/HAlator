@@ -41,3 +41,6 @@ utils/process_reaction_data.py
 utils/process_val_exp_radicals.py
 utils/process_val_exp.py
 utils/xyz2mol.py
+
+smi2gcs/smi2gcs.py
+smi2gcs/smi2gcs_submit.py
