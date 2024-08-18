@@ -6,7 +6,6 @@ __pycache__/
 dep/
 data/
 ml_halator/
-model/
 notebooks/
 reports/
 test/
