@@ -1,0 +1,11 @@
+name: smi2gcs
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9.18
+  - rdkit=2023.09.5
+  - numpy=1.26.4
+  - pandas=2.2.0
+  - ipython
+  - ipykernel

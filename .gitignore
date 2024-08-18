@@ -5,6 +5,8 @@ __pycache__/
 # internal
 code_snippets/
 dep/
+data/calc_smi2gcs/*
+!data/calc_smi2gcs/
 data/datasets
 data/file_groups
 data/smi2gcs_calculations
@@ -26,11 +28,9 @@ ml_halator/ml_validator_clas_halator.py
 ml_halator/ml_validator_reg_halator.py
 ml_halator/train_n_shells.py
 
-
 notebooks/
 reports/
 test/
-
 
 utils/check_orca_rerun_calc.py
 utils/fix_orca_rerun_calc_reaction_data.py
