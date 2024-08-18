@@ -29,6 +29,7 @@ ml_halator/train_n_shells.py
 
 notebooks/
 reports/
+test/
 
 
 utils/check_orca_rerun_calc.py
