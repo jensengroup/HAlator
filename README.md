@@ -71,8 +71,7 @@ Note, that the preliminary dataframe contains the date the QM calculations are s
 
 After the QM calculations are completed, please run: 
     
-    python qm_pkalculator/etl.py -prelim data/qm_calculations/df_prelim_calc_test_{date}.
-
+    python qm_halator/etl.py -prelim data/qm_calculations/df_prelim_calc_test_{date}.pkl
 
 
 Now, the resulting dataframe with QM calculations are produced with the default location is here: `data/qm_calculations/`.
